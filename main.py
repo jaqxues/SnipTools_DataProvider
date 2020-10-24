@@ -1,6 +1,6 @@
 import sqlite3 as sl
 from scripts.db_wrapper import DbWrapper
-from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs
+from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs, gen_server_packs
 from os import path
 
 db_name = 'packs.db'
@@ -13,6 +13,8 @@ def gen_files():
         if should_create:
             db_wrapper.create_db()
             db_wrapper.add_sample_data()
+
+        gen_server_packs(db_wrapper.get_latest_packs())
 
         for pack in db_wrapper.get_latest_packs():
             gen_latest_pack(pack)

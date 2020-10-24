@@ -20,8 +20,8 @@ def gen_latest_pack(pack):
 
 def gen_history(sc_version, packs):
     values = [{
-        'pack_v_code': pack.pack_v_code,
-        'pack_version': pack.pack_version
+        'pack_version': pack.pack_version,
+        'pack_v_code': pack.pack_v_code
     } for pack in packs]
     with open(_get_pack_info_dir('History', f'History_Sc_v{sc_version}.json'), 'w+') as f:
         json.dump(values, f)
@@ -36,3 +36,17 @@ def gen_known_bugs(sc_version, known_bugs):
         } for bug in bugs) for (pack_version, bugs) in known_bugs.items()}
     with open(_get_pack_info_dir('KnownBugs', f'KnownBugs_Sc_v{sc_version}.json'), 'w+') as f:
         json.dump(known_bugs, f)
+
+
+def gen_server_packs(packs):
+    values = tuple(
+        {
+            'sc_version': pack.sc_version,
+            'name': pack.name,
+            'pack_version': pack.pack_version,
+            'pack_v_code': pack.pack_v_code,
+            'min_apk_v_code': pack.min_apk_v_code
+        }
+        for pack in packs)
+    with open(_get_pack_info_dir('', 'ServerPacks.json'), 'w+') as f:
+        json.dump(values, f)
