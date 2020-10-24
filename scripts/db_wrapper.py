@@ -1,7 +1,7 @@
 from collections import namedtuple
 from sqlite3 import Cursor
 
-PackRecord = namedtuple('PackRecord', 'id, name, sc_version, pack_version, pack_v_code, changelog, min_apk_v_code')
+PackRecord = namedtuple('PackRecord', 'id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog')
 KnownBugRecord = namedtuple('KnownBugRecord', 'id, category, description, filed_on')
 
 
