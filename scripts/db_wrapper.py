@@ -3,7 +3,7 @@ from sqlite3 import Cursor
 
 PackRecord = namedtuple('PackRecord',
                         'id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, created_at')
-KnownBugRecord = namedtuple('KnownBugRecord', 'id, category, description, filed_on')
+KnownBugRecord = namedtuple('KnownBugRecord', 'id, category, description, filed_on, fixed_on')
 
 
 class DbWrapper:
@@ -32,6 +32,7 @@ class DbWrapper:
                     'category'	TEXT NOT NULL,
                     'description'	TEXT NOT NULL,
                     'filed_on' DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    'fixed_on' DATE,
                     PRIMARY KEY('id' AUTOINCREMENT)
                 );
             ''')
@@ -68,6 +69,16 @@ class DbWrapper:
             (category, description)
         ).lastrowid
 
+    def fix_bug_for(self, bug_id, pack_id):
+        return self.con.execute(
+            'DELETE FROM KNOWN_BUGS_JOIN WHERE pack_id=? AND bug_id=?;', (pack_id, bug_id)
+        )
+
+    def mark_bug_as_fixed(self, bug_id, delete_links=False):
+        if delete_links:
+            self.con.execute('DELETE FROM KNOWN_BUGS_JOIN WHERE bug_id=?', (bug_id,))
+        self.con.execute('UPDATE KNOWN_BUGS SET fixed_on=CURRENT_TIMESTAMP WHERE id=?', (bug_id,))
+
     def link_bug(self, bug_id, pack_id):
         return self.con.execute(
             'INSERT INTO KNOWN_BUGS_JOIN (pack_id, bug_id) VALUES (?, ?)',
@@ -79,16 +90,21 @@ class DbWrapper:
                     self.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
                     self.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
 
-        bug_id = self.insert_bug('Saving', 'Currently does not work')
-        self.link_bug(bug_id, pack_ids[0])
+        bug_ids = [self.insert_bug('Saving', 'Currently does not work'),
+                   self.insert_bug('Screenshot Bypass', 'Randomly stopped working')]
+
+        self.link_bug(bug_ids[0], pack_ids[0])
+
         self.inherit_bugs_from(pack_ids[0], pack_ids[1])
-        bug_id = self.insert_bug('Screenshot Bypass', 'Randomly stopped working')
-        self.link_bug(bug_id, pack_ids[1])
+        self.link_bug(bug_ids[1], pack_ids[1])
+
         self.inherit_bugs_from(pack_ids[1], pack_ids[2])
+        self.mark_bug_as_fixed(bug_ids[0])
+        self.fix_bug_for(bug_ids[0], pack_ids[2])
 
     def get_known_bugs(self, pack_id):
         return map(KnownBugRecord._make, self.con.execute(f'''
-                                SELECT bug_id, category, description, filed_on
+                                SELECT bug_id, category, description, filed_on, fixed_on
                                 FROM KNOWN_BUGS_JOIN 
                                 LEFT JOIN KNOWN_BUGS ON KNOWN_BUGS.id=bug_id 
                                 WHERE pack_id=?
