@@ -6,13 +6,31 @@ from os import path
 db_name = 'packs.db'
 
 
+def add_sample_data(dbw: DbWrapper):
+    pack_ids = [dbw.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0'),
+                dbw.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
+                dbw.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
+
+    bug_ids = [dbw.insert_bug('Saving', 'Currently does not work'),
+               dbw.insert_bug('Screenshot Bypass', 'Randomly stopped working')]
+
+    dbw.link_bug(bug_ids[0], pack_ids[0])
+
+    dbw.inherit_bugs_from(pack_ids[0], pack_ids[1])
+    dbw.link_bug(bug_ids[1], pack_ids[1])
+
+    dbw.inherit_bugs_from(pack_ids[1], pack_ids[2])
+    dbw.mark_bug_as_fixed(bug_ids[0])
+    dbw.fix_bug_for(bug_ids[0], pack_ids[2])
+
+
 def gen_files():
     should_create = not path.isfile(db_name)
     with sl.connect(db_name) as con:
         db_wrapper = DbWrapper(con)
         if should_create:
             db_wrapper.create_db()
-            db_wrapper.add_sample_data()
+            add_sample_data(db_wrapper)
 
         gen_server_packs(db_wrapper.get_latest_packs())
 

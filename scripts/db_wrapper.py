@@ -85,23 +85,6 @@ class DbWrapper:
             (pack_id, bug_id)
         ).lastrowid
 
-    def add_sample_data(self):
-        pack_ids = [self.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0'),
-                    self.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
-                    self.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
-
-        bug_ids = [self.insert_bug('Saving', 'Currently does not work'),
-                   self.insert_bug('Screenshot Bypass', 'Randomly stopped working')]
-
-        self.link_bug(bug_ids[0], pack_ids[0])
-
-        self.inherit_bugs_from(pack_ids[0], pack_ids[1])
-        self.link_bug(bug_ids[1], pack_ids[1])
-
-        self.inherit_bugs_from(pack_ids[1], pack_ids[2])
-        self.mark_bug_as_fixed(bug_ids[0])
-        self.fix_bug_for(bug_ids[0], pack_ids[2])
-
     def get_known_bugs(self, pack_id):
         return map(KnownBugRecord._make, self.con.execute(f'''
                                 SELECT bug_id, category, description, filed_on, fixed_on
