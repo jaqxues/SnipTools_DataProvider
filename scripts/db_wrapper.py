@@ -1,7 +1,8 @@
 from collections import namedtuple
 from sqlite3 import Cursor
 
-PackRecord = namedtuple('PackRecord', 'id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog')
+PackRecord = namedtuple('PackRecord',
+                        'id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, created_at')
 KnownBugRecord = namedtuple('KnownBugRecord', 'id, category, description, filed_on')
 
 
@@ -20,6 +21,7 @@ class DbWrapper:
                     'pack_v_code'	INTEGER NOT NULL,
                     'min_apk_v_code' INTEGER NOT NULL,
                     'changelog'     TEXT NOT NULL,
+                    'created_at' DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY('id' AUTOINCREMENT)
                 );
             ''')
@@ -52,6 +54,14 @@ class DbWrapper:
             (name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog)
         ).lastrowid
 
+    def inherit_bugs_from(self, previous_pack_id, current_pack_id):
+        self.con.execute(
+            f'''
+                    INSERT INTO KNOWN_BUGS_JOIN (pack_id, bug_id)
+                    SELECT ?, bug_id FROM KNOWN_BUGS_JOIN WHERE pack_id=?;
+            ''', (current_pack_id, previous_pack_id)
+        )
+
     def insert_bug(self, category, description):
         return self.con.execute(
             'INSERT INTO KNOWN_BUGS (category, description) VALUES(?,?);',
@@ -65,11 +75,16 @@ class DbWrapper:
         ).lastrowid
 
     def add_sample_data(self):
-        self.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0')
-        self.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving')
-        self.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')
-        self.insert_bug('Saving', 'Currently does not work')
-        self.link_bug(1, 1)
+        pack_ids = [self.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0'),
+                    self.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
+                    self.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
+
+        bug_id = self.insert_bug('Saving', 'Currently does not work')
+        self.link_bug(bug_id, pack_ids[0])
+        self.inherit_bugs_from(pack_ids[0], pack_ids[1])
+        bug_id = self.insert_bug('Screenshot Bypass', 'Randomly stopped working')
+        self.link_bug(bug_id, pack_ids[1])
+        self.inherit_bugs_from(pack_ids[1], pack_ids[2])
 
     def get_known_bugs(self, pack_id):
         return map(KnownBugRecord._make, self.con.execute(f'''
@@ -84,15 +99,15 @@ class DbWrapper:
 
     def get_packs_for_sc(self, sc_version):
         return map(PackRecord._make, self.con.execute(f'''
-                    SELECT id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog
+                    SELECT id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, created_at
                     FROM PACKS 
                     WHERE sc_version=?
                 ''', (sc_version,)))
 
     def get_latest_packs(self):
         return map(PackRecord._make, self.con.execute('''
-                SELECT
-                id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog
+                SELECT id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, created_at
                 FROM PACKS
-                WHERE (sc_version, pack_v_code) IN (SELECT sc_version, MAX(pack_v_code) FROM PACKS GROUP BY sc_version)
+                WHERE (sc_version, pack_v_code) IN 
+                    (SELECT sc_version, MAX(pack_v_code) FROM PACKS GROUP BY sc_version)
             '''))
