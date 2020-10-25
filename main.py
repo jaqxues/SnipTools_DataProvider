@@ -26,7 +26,7 @@ def add_sample_data(dbw: DbWrapper):
 
 def gen_files():
     should_create = not path.isfile(db_name)
-    with sl.connect(db_name) as con:
+    with sl.connect(db_name, detect_types=sl.PARSE_COLNAMES) as con:
         db_wrapper = DbWrapper(con)
         if should_create:
             db_wrapper.create_db()
