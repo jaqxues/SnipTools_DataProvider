@@ -22,7 +22,7 @@ class DbWrapper:
                     'pack_v_code'	INTEGER NOT NULL,
                     'min_apk_v_code' INTEGER NOT NULL,
                     'changelog'     TEXT NOT NULL,
-                    'created_at' DATE NOT NULL,
+                    'created_at' TIMESTAMP NOT NULL,
                     PRIMARY KEY('id' AUTOINCREMENT)
                 );
             ''')
@@ -32,8 +32,8 @@ class DbWrapper:
                     'id'	INTEGER,
                     'category'	TEXT NOT NULL,
                     'description'	TEXT NOT NULL,
-                    'filed_on' DATE NOT NULL,
-                    'fixed_on' DATE,
+                    'filed_on' TIMESTAMP NOT NULL,
+                    'fixed_on' TIMESTAMP,
                     PRIMARY KEY('id' AUTOINCREMENT)
                 );
             ''')
