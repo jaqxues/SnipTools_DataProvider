@@ -41,7 +41,7 @@ def gen_files():
             packs = tuple(db_wrapper.get_packs_for_sc(sc_version))
             gen_history(sc_version, packs)
 
-            known_bugs = {pack.pack_version: tuple(db_wrapper.get_known_bugs(pack.id)) for pack in packs}
+            known_bugs = {pack.pack_version: tuple(db_wrapper.get_active_known_bugs(pack.id)) for pack in packs}
             gen_known_bugs(sc_version, known_bugs)
 
 
