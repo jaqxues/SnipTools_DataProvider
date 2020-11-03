@@ -1,6 +1,6 @@
 import sqlite3 as sl
 from scripts.db_wrapper import DbWrapper
-from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs, gen_server_packs
+from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs, gen_server_packs, gen_server_apks
 from os import path
 
 db_name = 'releases.db'
@@ -45,6 +45,8 @@ def gen_files():
 
             known_bugs = {pack.pack_version: tuple(db_wrapper.get_active_known_bugs(pack.id)) for pack in packs}
             gen_known_bugs(sc_version, known_bugs)
+
+        gen_server_apks(db_wrapper.get_latest_apk())
 
 
 if __name__ == '__main__':

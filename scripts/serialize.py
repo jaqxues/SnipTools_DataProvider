@@ -3,6 +3,11 @@ from pathlib import Path
 from os import path
 
 
+def _get_apk_info_dir(dir, file_name):
+    t = path.join('Apks/Info/', dir)
+    Path(t).mkdir(parents=True, exist_ok=True)
+    return path.join(t, file_name)
+
 def _get_pack_info_dir(dir, file_name):
     t = path.join('Packs/Info/', dir)
     Path(t).mkdir(parents=True, exist_ok=True)
@@ -50,6 +55,17 @@ def gen_server_packs(packs):
         }
         for pack in packs)
     with open(_get_pack_info_dir('', 'ServerPacks.json'), 'w+') as f:
+        json.dump(values, f)
+
+
+def gen_server_apks(apk):
+    values = {
+        'name': apk.name,
+        'apk_v_code': apk.apk_v_code,
+        'apk_v_name': apk.apk_v_name,
+        'created_at': _serialize_date(apk.created_at)
+    }
+    with open(_get_apk_info_dir('', 'ServerApks.json'), 'w+') as f:
         json.dump(values, f)
 
 
