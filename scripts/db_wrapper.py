@@ -48,6 +48,17 @@ class DbWrapper:
                 );
         ''')
 
+        self.con.execute('''
+                CREATE TABLE APKS (
+                    'id' INTEGER,
+                    'name' TEXT NOT NULL,
+                    'apk_v_code' INTEGER NOT NULL UNIQUE,
+                    'apk_v_name' TEXT NOT NULL UNIQUE,
+                    'created_at' TIMESTAMP NOT NULL,
+                    PRIMARY KEY('id' AUTOINCREMENT)
+                );
+        ''')
+
     def insert_pack(self, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog):
         return self.con.execute(
             '''
@@ -58,9 +69,18 @@ class DbWrapper:
             (name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, datetime.now())
         ).lastrowid
 
+    def insert_apk(self, name, apk_v_code, apk_v_name):
+        return self.con.execute(
+            '''
+                    INSERT INTO APKS
+                    (name, apk_v_code, apk_v_name, created_at)
+                    VALUES(?,?,?,?);
+            ''', (name, apk_v_code, apk_v_name, datetime.now())
+        )
+
     def inherit_bugs_from(self, previous_pack_id, current_pack_id):
         self.con.execute(
-            f'''
+            '''
                     INSERT INTO KNOWN_BUGS_JOIN (pack_id, bug_id)
                     SELECT ?, bug_id FROM KNOWN_BUGS_JOIN WHERE pack_id=?;
             ''', (current_pack_id, previous_pack_id)

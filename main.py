@@ -3,10 +3,12 @@ from scripts.db_wrapper import DbWrapper
 from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs, gen_server_packs
 from os import path
 
-db_name = 'packs.db'
+db_name = 'releases.db'
 
 
 def add_sample_data(dbw: DbWrapper):
+    apk_ids = [dbw.insert_apk("SnipTools_Release", 2, "1.0.1"),
+               dbw.insert_apk("SnipTools_Release", 4, "1.1.0")]
     pack_ids = [dbw.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0'),
                 dbw.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
                 dbw.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
