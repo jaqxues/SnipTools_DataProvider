@@ -148,4 +148,4 @@ class DbWrapper:
         if len(data) == 0:
             return
         assert len(data) == 1, "Unsupported Length"
-        return ApkRecord._make(data)
+        return ApkRecord._make(*data)
