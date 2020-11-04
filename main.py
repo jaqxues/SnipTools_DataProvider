@@ -26,13 +26,14 @@ def add_sample_data(dbw: DbWrapper):
     dbw.fix_bug_for(bug_ids[0], pack_ids[2])
 
 
-def gen_files():
+def gen_files(test=False):
     should_create = not path.isfile(db_name)
     with sl.connect(db_name, detect_types=sl.PARSE_COLNAMES) as con:
         db_wrapper = DbWrapper(con)
         if should_create:
             db_wrapper.create_db()
-            add_sample_data(db_wrapper)
+            if test:
+                add_sample_data(db_wrapper)
 
         gen_server_packs(db_wrapper.get_latest_packs())
 
@@ -50,4 +51,9 @@ def gen_files():
 
 
 if __name__ == '__main__':
-    gen_files()
+    test = False
+    if test:
+        db_name = 'test.db'
+        gen_files(True)
+    else:
+        gen_files()

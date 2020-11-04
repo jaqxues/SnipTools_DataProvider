@@ -139,9 +139,13 @@ class DbWrapper:
             '''))
 
     def get_latest_apk(self):
-        return ApkRecord._make(*self.con.execute('''
+        data = self.con.execute('''
                 SELECT id, name, apk_v_code, apk_v_name, created_at AS "[timestamp]" 
                 FROM APKS
                 ORDER BY apk_v_code DESC, id DESC, created_at DESC
                 LIMIT 1
-        '''))
+        ''').fetchall()
+        if len(data) == 0:
+            return
+        assert len(data) == 1, "Unsupported Length"
+        return ApkRecord._make(data)

@@ -59,6 +59,8 @@ def gen_server_packs(packs):
 
 
 def gen_server_apks(apk):
+    if not apk:
+        return
     values = {
         'name': apk.name,
         'apk_v_code': apk.apk_v_code,
