@@ -28,6 +28,7 @@ def add_sample_data(dbw: DbWrapper):
 
 def add_data(dbw):
     dbw.insert_apk("SnipTools_Release", 1, "0.0.01")
+    dbw.insert_apk("SnipTools_Release", 1, "0.0.02")
     pack_id = dbw.insert_pack("Pack_0.0.01_11.4.5.73", "11.4.5.73", "0.0.01", 1, 1, "Initial Release")
     bug_ids = [
         dbw.insert_bug("Saving", "Saving is currently only for testing purposes")

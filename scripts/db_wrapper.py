@@ -53,7 +53,7 @@ class DbWrapper:
                 CREATE TABLE APKS (
                     'id' INTEGER,
                     'name' TEXT NOT NULL,
-                    'apk_v_code' INTEGER NOT NULL UNIQUE,
+                    'apk_v_code' INTEGER NOT NULL,
                     'apk_v_name' TEXT NOT NULL UNIQUE,
                     'created_at' TIMESTAMP NOT NULL,
                     PRIMARY KEY('id' AUTOINCREMENT)
