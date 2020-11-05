@@ -26,28 +26,14 @@ def add_sample_data(dbw: DbWrapper):
     dbw.fix_bug_for(bug_ids[0], pack_ids[2])
 
 
-def add_data(dbw):
-    dbw.insert_apk("SnipTools_Release", 1, "0.0.01")
-    dbw.insert_apk("SnipTools_Release", 1, "0.0.02")
-    pack_id = dbw.insert_pack("Pack_0.0.01_11.4.5.73", "11.4.5.73", "0.0.01", 1, 1, "Initial Release")
-    bug_ids = [
-        dbw.insert_bug("Saving", "Saving is currently only for testing purposes")
-    ]
-    for bug_id in bug_ids:
-        dbw.link_bug(bug_id, pack_id)
-
-
-def gen_files(test=False):
+def gen_files(add_data):
     should_create = not path.isfile(db_name)
     with sl.connect(db_name, detect_types=sl.PARSE_COLNAMES) as con:
         db_wrapper = DbWrapper(con)
         if should_create:
             db_wrapper.create_db()
-            if test:
-                add_sample_data(db_wrapper)
-            else:
-                add_data(db_wrapper)
 
+        add_data(db_wrapper)
         gen_server_packs(db_wrapper.get_latest_packs())
 
         for pack in db_wrapper.get_latest_packs():
@@ -63,10 +49,21 @@ def gen_files(test=False):
         gen_server_apks(db_wrapper.get_latest_apk())
 
 
+def add_data(dbw: DbWrapper):
+    dbw.insert_apk("SnipTools_Release", 1, "0.0.03")
+    pack_id = dbw.insert_pack("Pack_0.0.03_11.4.5.73", "11.4.5.73", "0.0.03", 2, 1, "Initial Release")
+    bug_ids = [
+
+    ]
+    for bug_id in bug_ids:
+        dbw.link_bug(bug_id, pack_id)
+    dbw.inherit_bugs_from(1, pack_id)
+
+
 if __name__ == '__main__':
     test = False
     if test:
         db_name = 'test.db'
-        gen_files(True)
+        gen_files(add_sample_data)
     else:
-        gen_files()
+        gen_files(add_data)
