@@ -5,7 +5,7 @@ from datetime import datetime
 PackRecord = namedtuple('PackRecord',
                         'id, name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, created_at')
 KnownBugRecord = namedtuple('KnownBugRecord', 'id, category, description, filed_on, fixed_on')
-ApkRecord = namedtuple('ApkRecord', 'id, name, apk_v_code, apk_v_name, created_at')
+ApkRecord = namedtuple('ApkRecord', 'id, name, apk_v_code, apk_v_name, changelog, created_at')
 
 
 class DbWrapper:
@@ -55,6 +55,7 @@ class DbWrapper:
                     'name' TEXT NOT NULL,
                     'apk_v_code' INTEGER NOT NULL,
                     'apk_v_name' TEXT NOT NULL UNIQUE,
+                    'changelog' TEXT NOT NULL,
                     'created_at' TIMESTAMP NOT NULL,
                     PRIMARY KEY('id' AUTOINCREMENT)
                 );
@@ -70,14 +71,14 @@ class DbWrapper:
             (name, sc_version, pack_version, pack_v_code, min_apk_v_code, changelog, datetime.now())
         ).lastrowid
 
-    def insert_apk(self, name, apk_v_code, apk_v_name):
+    def insert_apk(self, name, apk_v_code, apk_v_name, changelog):
         return self.con.execute(
             '''
                     INSERT INTO APKS
-                    (name, apk_v_code, apk_v_name, created_at)
-                    VALUES(?,?,?,?);
-            ''', (name, apk_v_code, apk_v_name, datetime.now())
-        )
+                    (name, apk_v_code, apk_v_name, changelog, created_at)
+                    VALUES(?,?,?,?,?);
+            ''', (name, apk_v_code, apk_v_name, changelog, datetime.now())
+        ).lastrowid
 
     def inherit_bugs_from(self, previous_pack_id, current_pack_id):
         self.con.execute(
@@ -140,7 +141,7 @@ class DbWrapper:
 
     def get_latest_apk(self):
         data = self.con.execute('''
-                SELECT id, name, apk_v_code, apk_v_name, created_at AS "[timestamp]" 
+                SELECT id, name, apk_v_code, apk_v_name, changelog, created_at AS "[timestamp]" 
                 FROM APKS
                 ORDER BY apk_v_code DESC, id DESC, created_at DESC
                 LIMIT 1

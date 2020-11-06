@@ -50,14 +50,7 @@ def gen_files(add_data):
 
 
 def add_data(dbw: DbWrapper):
-    dbw.insert_apk("SnipTools_Release", 1, "0.0.03")
-    pack_id = dbw.insert_pack("Pack_0.0.03_11.4.5.73", "11.4.5.73", "0.0.03", 2, 1, "Initial Release")
-    bug_ids = [
-
-    ]
-    for bug_id in bug_ids:
-        dbw.link_bug(bug_id, pack_id)
-    dbw.inherit_bugs_from(1, pack_id)
+    pass
 
 
 if __name__ == '__main__':
