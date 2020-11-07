@@ -16,6 +16,7 @@ def _get_pack_info_dir(dir, file_name):
 
 def gen_latest_pack(pack):
     values = {
+        'name': pack.name,
         'pack_version': pack.pack_version,
         'pack_v_code': pack.pack_v_code
     }
@@ -25,8 +26,11 @@ def gen_latest_pack(pack):
 
 def gen_history(sc_version, packs):
     values = [{
+        'name': pack.name,
         'pack_version': pack.pack_version,
-        'pack_v_code': pack.pack_v_code
+        'pack_v_code': pack.pack_v_code,
+        'min_apk_v_code': pack.min_apk_v_code,
+        'created_at': _serialize_date(pack.created_at)
     } for pack in packs]
     with open(_get_pack_info_dir('History', f'History_Sc_v{sc_version}.json'), 'w+') as f:
         json.dump(values, f)
