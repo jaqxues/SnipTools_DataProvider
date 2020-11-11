@@ -18,7 +18,8 @@ def gen_latest_pack(pack):
     values = {
         'name': pack.name,
         'pack_version': pack.pack_version,
-        'pack_v_code': pack.pack_v_code
+        'pack_v_code': pack.pack_v_code,
+        'changelog': pack.changelog
     }
     with open(_get_pack_info_dir('Updates', f'Latest_Sc_v{pack.sc_version}.json'), 'w+') as f:
         json.dump(values, f)
