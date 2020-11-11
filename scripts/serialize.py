@@ -56,7 +56,8 @@ def gen_server_packs(packs):
             'name': pack.name,
             'pack_version': pack.pack_version,
             'pack_v_code': pack.pack_v_code,
-            'min_apk_v_code': pack.min_apk_v_code
+            'min_apk_v_code': pack.min_apk_v_code,
+            'changelog': pack.changelog
         }
         for pack in packs)
     with open(_get_pack_info_dir('', 'ServerPacks.json'), 'w+') as f:
