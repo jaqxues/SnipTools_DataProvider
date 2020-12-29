@@ -120,7 +120,7 @@ class DbWrapper:
                                 ''', (pack_id,)).fetchall())
 
     def get_sc_versions(self):
-        return (x[0] for x in self.con.execute('SELECT DISTINCT sc_version FROM PACKS'))
+        return (x[0] for x in self.con.execute('SELECT DISTINCT sc_version FROM PACKS ORDER BY sc_version DESC'))
 
     def get_packs_for_sc(self, sc_version):
         return map(PackRecord._make, self.con.execute(f'''
@@ -128,6 +128,7 @@ class DbWrapper:
                             min_apk_v_code, changelog, created_at AS "[timestamp]"
                     FROM PACKS
                     WHERE sc_version=?
+                    ORDER BY created_at DESC
                 ''', (sc_version,)))
 
     def get_latest_packs(self):

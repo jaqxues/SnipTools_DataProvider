@@ -1,62 +1,130 @@
+from shutil import copyfile
+from argparse import ArgumentParser
 import sqlite3 as sl
-from scripts.db_wrapper import DbWrapper
-from scripts.serialize import gen_latest_pack, gen_history, gen_known_bugs, gen_server_packs, gen_server_apks
+from zipfile import ZipFile
+from collections import namedtuple
+from scripts.db_wrapper import *
+from scripts.serialize import *
 from os import path
 
-db_name = 'releases.db'
+ExtractedPackData = namedtuple('ExtractedPackData', ('flavor', 'development', 'pack_version', 'pack_version_code',
+                                                     'min_apk_version_code', 'pack_impl_class', 'sc_version'))
 
 
-def add_sample_data(dbw: DbWrapper):
-    apk_ids = [dbw.insert_apk("SnipTools_Release", 2, "1.0.1"),
-               dbw.insert_apk("SnipTools_Release", 4, "1.1.0")]
-    pack_ids = [dbw.insert_pack('Pack_v1', '10.48.5.0', '1.2.0', 10, 1, 'Updated for 10.48.5.0'),
-                dbw.insert_pack('Pack_v2', '10.48.5.0', '1.2.1', 11, 2, 'Fixed Saving'),
-                dbw.insert_pack('Pack_v3', '10.49.5.0', '1.2.3', 12, 2, 'Updated for 10.49')]
+def new_pack_extract(pack_name: str):
+    assert path.isfile(pack_name), f'Specified file ("{pack_name}") does not exist'
+    assert pack_name.endswith('.jar'), f'Specified file ("{pack_name}" is an invalid name for a pack)'
+    with ZipFile(pack_name) as zf:
+        assert 'classes.dex' in zf.NameToInfo, 'classes.dex was not found in Pack, invalid pack'
+        assert (manifest_name := 'META-INF/MANIFEST.MF') in zf.NameToInfo, \
+            'MANIFEST.MF was not found in jar file, invalid pack'
+        with zf.open(manifest_name) as mnf:
+            raw_contents = (str(c.strip(), 'utf-8').split(':', 2) for c in mnf.readlines())
 
-    bug_ids = [dbw.insert_bug('Saving', 'Currently does not work'),
-               dbw.insert_bug('Screenshot Bypass', 'Randomly stopped working')]
+    contents = {c[0]: c[1] for c in raw_contents if len(c) == 2}
+    attributes = 'Flavor', 'Development', 'PackVersion', 'PackVersionCode', \
+                 'MinApkVersionCode', 'PackImplClass', 'ScVersion'
+    for attr in contents:
+        assert attr in contents, f'Missing attribute in manifest: "{attr}"'
 
-    dbw.link_bug(bug_ids[0], pack_ids[0])
+    data = tuple(contents[attributes[i]] for i in range(len(attributes)))
 
-    dbw.inherit_bugs_from(pack_ids[0], pack_ids[1])
-    dbw.link_bug(bug_ids[1], pack_ids[1])
+    print("Supplied the following (relevant) key-value pairs in the manifest attributes")
+    print()
+    for name, val in zip(attributes, data):
+        print(name, "-", val)
+    pack_data = ExtractedPackData(*data)
 
-    dbw.inherit_bugs_from(pack_ids[1], pack_ids[2])
-    dbw.mark_bug_as_fixed(bug_ids[0])
-    dbw.fix_bug_for(bug_ids[0], pack_ids[2])
+    print()
+    print("Input Changelog / Release Notes (leave empty to continue)")
+    release_notes = []
+    while i := input("Next: "):
+        release_notes.append(i)
+    print("Release Notes:", release_notes)
+
+    print()
+    print("Copy file to", copy_path := "Packs/Files/" + path.basename(pack_name))
+    copyfile(pack_name, copy_path)
+    return pack_data, release_notes
 
 
-def gen_files(add_data):
+def new_pack_known_bugs(dbw: DbWrapper):
+    while (i := input('Should the pack inherit Known Bugs? (y/n): ')) not in ('y', 'n'):
+        pass
+    if i == 'n':
+        return
+    print()
+
+    print("Choose what Known Bugs the Pack should inherit (by ScVersion and Pack)")
+    sc_versions = tuple(dbw.get_sc_versions())
+    for i, sc_version in zip(range(20), sc_versions):
+        print(f'{i:2}', '-', sc_version)
+    sc_version = sc_versions[int(input('Label of Snapchat version: '))]
+    print('Selected Snapchat Version:', sc_versions)
+
+    packs = tuple(dbw.get_packs_for_sc(sc_version))
+    if len(packs) == 1:
+        pack = packs[0]
+    else:
+        print('Choose a pack that supports snapchat version')
+        for idx, pack in enumerate(packs):
+            print(idx, '-', pack)
+        pack = packs[int(input('Label of pack: '))]
+    print('Inheriting Bugs from selected Pack:', pack)
+    return pack.id
+
+
+def add_new_pack(dbw: DbWrapper, pack_name):
+    data, release_notes = new_pack_extract(pack_name)
+    previous = new_pack_known_bugs(dbw)
+    print()
+    print('Inserting Pack into Database')
+    current = dbw.insert_pack(pack_name, data.sc_version, data.pack_version, data.pack_version_code,
+                              data.min_apk_version_code, '\n'.join(release_notes))
+    if previous:
+        print('Inheriting KnownBugs from selected pack')
+        dbw.inherit_bugs_from(previous, current)
+
+
+def gen_files(dbw):
+    gen_server_packs(dbw.get_latest_packs())
+
+    for pack in dbw.get_latest_packs():
+        gen_latest_pack(pack)
+
+    for sc_version in dbw.get_sc_versions():
+        packs = tuple(dbw.get_packs_for_sc(sc_version))
+        gen_history(sc_version, packs)
+
+        known_bugs = {pack.pack_version: tuple(dbw.get_active_known_bugs(pack.id)) for pack in packs}
+        gen_known_bugs(sc_version, known_bugs)
+
+    gen_server_apks(dbw.get_latest_apk())
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('-t', '--test', action='store_true',
+                        help='Running in test mode (on a database called "test.db")')
+    parser.add_argument('-db', '--db-name',
+                        help='Specify a database name (default: releases.db)')
+    parser.add_argument('-np', '--new-pack',
+                        help='Specifies that a new Pack should be released (Path to Pack as Argument)')
+    parser.add_argument('-ng', '--no-gen-files', action='store_true',
+                        help='If specified, the files are not regenerated')
+    args = parser.parse_args()
+
+    db_name = args.db_name or ('test.db' if args.test else 'releases.db')
+
     should_create = not path.isfile(db_name)
     with sl.connect(db_name, detect_types=sl.PARSE_COLNAMES) as con:
         db_wrapper = DbWrapper(con)
         if should_create:
             db_wrapper.create_db()
 
-        add_data(db_wrapper)
-        gen_server_packs(db_wrapper.get_latest_packs())
-
-        for pack in db_wrapper.get_latest_packs():
-            gen_latest_pack(pack)
-
-        for sc_version in db_wrapper.get_sc_versions():
-            packs = tuple(db_wrapper.get_packs_for_sc(sc_version))
-            gen_history(sc_version, packs)
-
-            known_bugs = {pack.pack_version: tuple(db_wrapper.get_active_known_bugs(pack.id)) for pack in packs}
-            gen_known_bugs(sc_version, known_bugs)
-
-        gen_server_apks(db_wrapper.get_latest_apk())
-
-
-def add_data(dbw: DbWrapper):
-    pass
-
-
-if __name__ == '__main__':
-    test = False
-    if test:
-        db_name = 'test.db'
-        gen_files(add_sample_data)
-    else:
-        gen_files(add_data)
+        if pack_name := args.new_pack:
+            print('Adding new Pack to packs.db')
+            add_new_pack(db_wrapper, pack_name)
+        if not args.no_gen_files:
+            print('Regenerating Files')
+            gen_files(db_wrapper)
