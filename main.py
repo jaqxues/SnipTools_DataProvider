@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from shutil import copyfile
 from argparse import ArgumentParser
 import sqlite3 as sl
@@ -74,6 +76,29 @@ def new_pack_known_bugs(dbw: DbWrapper):
     return pack.id
 
 
+def new_pack_remove_bugs(dbw: DbWrapper, current):
+    to_remove = []
+    kbs = tuple(dbw.get_active_known_bugs(current))
+    if not kbs:
+        return to_remove
+    print("Choose what bugs you want to mark as fixed for the current Pack (Leave empty to continue)")
+    for idx, kb in enumerate(kbs):
+        print(idx, '-', kb)
+    while i := input("Input next Label: "):
+        to_remove.append(kbs[int(i)])
+    return to_remove
+
+
+def new_pack_add_bugs(dbw: DbWrapper):
+    print('Input new Known Bugs')
+    print('Existing Categories:', ', '.join(dbw.get_existing_descriptions()))
+    new_bugs = []
+    while cat := input("Input the new report's category: "):
+        des = input("Input the new report's description: ")
+        new_bugs.append((cat, des))
+    return new_bugs
+
+
 def add_new_pack(dbw: DbWrapper, pack_name):
     data, release_notes = new_pack_extract(pack_name)
     previous = new_pack_known_bugs(dbw)
@@ -84,6 +109,19 @@ def add_new_pack(dbw: DbWrapper, pack_name):
     if previous:
         print('Inheriting KnownBugs from selected pack')
         dbw.inherit_bugs_from(previous, current)
+    while (i := input('Do you want to edit associated bugs? (y/n): ')) not in ('y', 'n'):
+        pass
+    if i == 'n':
+        return []
+    if remove_bugs := new_pack_remove_bugs(current, dbw):
+        for kb in remove_bugs:
+            if not kb.fixed_on:
+                dbw.mark_bug_as_fixed(kb.id)
+            dbw.fix_bug_for(kb.id, current)
+    if new_bugs := new_pack_add_bugs(current):
+        for cat, des in new_bugs:
+            bug_id = dbw.insert_bug(cat, des)
+            dbw.link_bug(bug_id, current)
 
 
 def gen_files(dbw):

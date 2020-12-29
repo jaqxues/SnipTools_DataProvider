@@ -122,6 +122,9 @@ class DbWrapper:
     def get_sc_versions(self):
         return (x[0] for x in self.con.execute('SELECT DISTINCT sc_version FROM PACKS ORDER BY sc_version DESC'))
 
+    def get_existing_descriptions(self):
+        return (x[0] for x in self.con.execute('SELECT DISTINCT category FROM KNOWN_BUGS ORDER BY category'))
+
     def get_packs_for_sc(self, sc_version):
         return map(PackRecord._make, self.con.execute(f'''
                     SELECT id, name, sc_version, pack_version, pack_v_code, 
