@@ -31,22 +31,18 @@ def new_pack_extract(pack_name: str):
 
     data = tuple(contents[attributes[i]] for i in range(len(attributes)))
 
-    print("Supplied the following (relevant) key-value pairs in the manifest attributes")
+    print('Supplied the following (relevant) key-value pairs in the manifest attributes')
     print()
     for name, val in zip(attributes, data):
-        print(name, "-", val)
+        print(name, '-', val)
     pack_data = ExtractedPackData(*data)
 
     print()
-    print("Input Changelog / Release Notes (leave empty to continue)")
+    print('Input Changelog / Release Notes (leave empty to continue)')
     release_notes = []
-    while i := input("Next: "):
+    while i := input('Next: '):
         release_notes.append(i)
-    print("Release Notes:", release_notes)
-
-    print()
-    print("Copy file to", copy_path := "Packs/Files/" + path.basename(pack_name))
-    copyfile(pack_name, copy_path)
+    print('Release Notes:', release_notes)
     return pack_data, release_notes
 
 
@@ -57,7 +53,7 @@ def new_pack_known_bugs(dbw: DbWrapper):
         return
     print()
 
-    print("Choose what Known Bugs the Pack should inherit (by ScVersion and Pack)")
+    print('Choose what Known Bugs the Pack should inherit (by ScVersion and Pack)')
     sc_versions = tuple(dbw.get_sc_versions())
     for i, sc_version in zip(range(20), sc_versions):
         print(f'{i:2}', '-', sc_version)
@@ -81,10 +77,10 @@ def new_pack_remove_bugs(dbw: DbWrapper, current):
     kbs = tuple(dbw.get_active_known_bugs(current))
     if not kbs:
         return to_remove
-    print("Choose what bugs you want to mark as fixed for the current Pack (Leave empty to continue)")
+    print('Choose what bugs you want to mark as fixed for the current Pack (Leave empty to continue)')
     for idx, kb in enumerate(kbs):
         print(idx, '-', kb)
-    while i := input("Input next Label: "):
+    while i := input('Input next Label: '):
         to_remove.append(kbs[int(i)])
     return to_remove
 
@@ -94,13 +90,20 @@ def new_pack_add_bugs(dbw: DbWrapper):
     print('Existing Categories:', ', '.join(dbw.get_existing_descriptions()))
     new_bugs = []
     while cat := input("Input the new report's category: "):
-        des = input("Input the new report's description: ")
+        if not (des := input("Input the new report's description: ")):
+            print('Empty description for new bug report, ignoring current entry')
+            continue
         new_bugs.append((cat, des))
     return new_bugs
 
 
 def add_new_pack(dbw: DbWrapper, pack_name):
     data, release_notes = new_pack_extract(pack_name)
+
+    print()
+    print('Copy file to', copy_path := 'Packs/Files/' + path.basename(pack_name))
+    copyfile(pack_name, copy_path)
+
     previous = new_pack_known_bugs(dbw)
     print()
     print('Inserting Pack into Database')
@@ -112,13 +115,17 @@ def add_new_pack(dbw: DbWrapper, pack_name):
     while (i := input('Do you want to edit associated bugs? (y/n): ')) not in ('y', 'n'):
         pass
     if i == 'n':
-        return []
+        return
     if remove_bugs := new_pack_remove_bugs(dbw, current):
+        print('Removing specified bugs:', remove_bugs)
         for kb in remove_bugs:
             if not kb.fixed_on:
                 dbw.mark_bug_as_fixed(kb.id)
+            print('Marking bug as fixed (setting date to now):', kb)
             dbw.fix_bug_for(kb.id, current)
+    print()
     if new_bugs := new_pack_add_bugs(dbw):
+        print('Adding specified bugs (category, description):', new_bugs)
         for cat, des in new_bugs:
             bug_id = dbw.insert_bug(cat, des)
             dbw.link_bug(bug_id, current)
