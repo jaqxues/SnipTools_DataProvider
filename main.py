@@ -113,12 +113,12 @@ def add_new_pack(dbw: DbWrapper, pack_name):
         pass
     if i == 'n':
         return []
-    if remove_bugs := new_pack_remove_bugs(current, dbw):
+    if remove_bugs := new_pack_remove_bugs(dbw, current):
         for kb in remove_bugs:
             if not kb.fixed_on:
                 dbw.mark_bug_as_fixed(kb.id)
             dbw.fix_bug_for(kb.id, current)
-    if new_bugs := new_pack_add_bugs(current):
+    if new_bugs := new_pack_add_bugs(dbw):
         for cat, des in new_bugs:
             bug_id = dbw.insert_bug(cat, des)
             dbw.link_bug(bug_id, current)
