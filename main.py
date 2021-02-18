@@ -5,9 +5,10 @@ from argparse import ArgumentParser
 import sqlite3 as sl
 from zipfile import ZipFile
 from collections import namedtuple
-from scripts.db_wrapper import *
-from scripts.serialize import *
+from scripts.db_wrapper import DbWrapper
+from scripts.serialize import gen_history, gen_server_packs, gen_server_apks, gen_latest_pack, gen_known_bugs
 from os import path
+import json
 
 ExtractedPackData = namedtuple('ExtractedPackData', ('flavor', 'development', 'pack_version', 'pack_version_code',
                                                      'min_apk_version_code', 'pack_impl_class', 'sc_version'))
@@ -81,7 +82,10 @@ def new_pack_remove_bugs(dbw: DbWrapper, current):
     for idx, kb in enumerate(kbs):
         print(idx, '-', kb)
     while i := input('Input next Label: '):
-        to_remove.append(kbs[int(i)])
+        try:
+            to_remove.append(kbs[int(i)])
+        except ValueError:
+            print("Input should be an Id (integer)")
     return to_remove
 
 
@@ -131,6 +135,28 @@ def add_new_pack(dbw: DbWrapper, pack_name):
             dbw.link_bug(bug_id, current)
 
 
+def add_new_apk(dbw: DbWrapper, apk_dir, apk_name=None):
+    with open(path.join(apk_dir, 'output-metadata.json'), 'r') as f:
+        info = json.loads(f.read())
+    v = info['version']
+    if v != 3:
+        raise Exception(f'output-metadata.json has an unsupported output format version (v{v}). Aborting Operation')
+    el = info['elements']
+    if (l := len(el)) != 1:
+        raise Exception(f'Cannot handle an element array of length {l} != 1. Aborting Operation')
+    el = el[0]
+    version_code, version_name, file_name = el['versionCode'], el['versionName'], el['outputFile']
+    apk_name = apk_name or file_name
+
+    release_notes = []
+    print('Input Changelogs (Leave empty to continue)')
+    while i := input('Input next Release note: '):
+        release_notes.append(i)
+
+    dbw.insert_apk(apk_name, version_code, version_name, '\n'.join(release_notes))
+    copyfile(path.join(apk_dir, file_name), path.join('Apks', 'Files', apk_name))
+
+
 def gen_files(dbw):
     gen_server_packs(dbw.get_latest_packs())
 
@@ -154,9 +180,13 @@ if __name__ == '__main__':
     parser.add_argument('-db', '--db-name',
                         help='Specify a database name (default: releases.db)')
     parser.add_argument('-np', '--new-pack',
-                        help='Specifies that a new Pack should be released (Path to Pack as Argument)')
+                        help='Specifies that a new Pack should be released (Path to Pack as argument)')
     parser.add_argument('-ng', '--no-gen-files', action='store_true',
                         help='If specified, the files are not regenerated')
+    parser.add_argument('-na', '--new-apk',
+                        help='Insert (and release) a new APK to the repo. (Path to APK output dir as argument')
+    parser.add_argument('-an', '--apk-name',
+                        help='Specifies name of the APK to be used')
     args = parser.parse_args()
 
     db_name = args.db_name or ('test.db' if args.test else 'releases.db')
@@ -170,6 +200,9 @@ if __name__ == '__main__':
         if pack_name := args.new_pack:
             print('Adding new Pack to packs.db')
             add_new_pack(db_wrapper, pack_name)
+        elif apk_dir := args.new_apk:
+            print('Adding new APK to packs.db')
+            add_new_apk(db_wrapper, apk_dir, args.apk_name)
         if not args.no_gen_files:
             print('Regenerating Files')
             gen_files(db_wrapper)
