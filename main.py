@@ -146,7 +146,11 @@ def add_new_apk(dbw: DbWrapper, apk_dir, apk_name=None):
         raise Exception(f'Cannot handle an element array of length {l} != 1. Aborting Operation')
     el = el[0]
     version_code, version_name, file_name = el['versionCode'], el['versionName'], el['outputFile']
-    apk_name = apk_name or file_name
+    if not file_name.endswith('.apk'):
+        raise Exception(f'Output filename does not end with .apk (current filename: {file_name})')
+    apk_name = apk_name or file_name[-4]
+    if apk_name.endswith('.apk'):
+        raise Exception(f'Given output filename should not end with .apk (current filename: {apk_name})')
 
     release_notes = []
     print('Input Changelogs (Leave empty to continue)')
@@ -154,7 +158,7 @@ def add_new_apk(dbw: DbWrapper, apk_dir, apk_name=None):
         release_notes.append(i)
 
     dbw.insert_apk(apk_name, version_code, version_name, '\n'.join(release_notes))
-    copyfile(path.join(apk_dir, file_name), path.join('Apks', 'Files', apk_name))
+    copyfile(path.join(apk_dir, file_name), path.join('Apks', 'Files', apk_name + '.apk'))
 
 
 def gen_files(dbw):
