@@ -104,14 +104,15 @@ def new_pack_add_bugs(dbw: DbWrapper):
 def add_new_pack(dbw: DbWrapper, pack_name):
     data, release_notes = new_pack_extract(pack_name)
 
+    pack_base_name = path.basename(pack_name)
     print()
-    print('Copy file to', copy_path := 'Packs/Files/' + path.basename(pack_name))
+    print('Copy file to', copy_path := 'Packs/Files/' + pack_base_name)
     copyfile(pack_name, copy_path)
 
     previous = new_pack_known_bugs(dbw)
     print()
     print('Inserting Pack into Database')
-    current = dbw.insert_pack(pack_name, data.sc_version, data.pack_version, data.pack_version_code,
+    current = dbw.insert_pack(pack_base_name[:-4], data.sc_version, data.pack_version, data.pack_version_code,
                               data.min_apk_version_code, '\n'.join(release_notes))
     if previous:
         print('Inheriting KnownBugs from selected pack')
