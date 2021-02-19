@@ -5,8 +5,8 @@ from argparse import ArgumentParser
 import sqlite3 as sl
 from zipfile import ZipFile
 from collections import namedtuple
-from scripts.db_wrapper import DbWrapper
-from scripts.serialize import gen_history, gen_server_packs, gen_server_apks, gen_latest_pack, gen_known_bugs
+from src.db_wrapper import DbWrapper
+from src.serialize import gen_history, gen_server_packs, gen_server_apks, gen_latest_pack, gen_known_bugs
 from os import path
 import json
 
