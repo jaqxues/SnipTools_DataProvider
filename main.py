@@ -14,6 +14,12 @@ ExtractedPackData = namedtuple('ExtractedPackData', ('flavor', 'development', 'p
                                                      'min_apk_version_code', 'pack_impl_class', 'sc_version'))
 
 
+def _parse_bool(s) -> bool:
+    if (s := s.lower()) not in ('false', 'true'):
+        raise Exception("Error not")
+    return s == 'true'
+
+
 def new_pack_extract(pack_name: str):
     assert path.isfile(pack_name), f'Specified file ("{pack_name}") does not exist'
     assert pack_name.endswith('.jar'), f'Specified file ("{pack_name}" is an invalid name for a pack)'
@@ -24,13 +30,19 @@ def new_pack_extract(pack_name: str):
         with zf.open(manifest_name) as mnf:
             raw_contents = (str(c.strip(), 'utf-8').split(':', 2) for c in mnf.readlines())
 
-    contents = {c[0]: c[1] for c in raw_contents if len(c) == 2}
-    attributes = 'Flavor', 'Development', 'PackVersion', 'PackVersionCode', \
-                 'MinApkVersionCode', 'PackImplClass', 'ScVersion'
+    contents = {c[0].strip(): c[1].strip() for c in raw_contents if len(c) == 2}
+    attributes = {
+        'Flavor': str,
+        'Development': _parse_bool,
+        'PackVersion': str,
+        'PackVersionCode': int,
+        'MinApkVersionCode': int,
+        'PackImplClass': str, 'ScVersion': str
+    }
     for attr in contents:
         assert attr in contents, f'Missing attribute in manifest: "{attr}"'
 
-    data = tuple(contents[attributes[i]] for i in range(len(attributes)))
+    data = tuple(transform(contents[attribute]) for (attribute, transform) in attributes.items())
 
     print('Supplied the following (relevant) key-value pairs in the manifest attributes')
     print()
