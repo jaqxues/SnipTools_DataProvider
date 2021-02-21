@@ -37,7 +37,8 @@ def new_pack_extract(pack_name: str):
         'PackVersion': str,
         'PackVersionCode': int,
         'MinApkVersionCode': int,
-        'PackImplClass': str, 'ScVersion': str
+        'PackImplClass': str,
+        'ScVersion': str
     }
     for attr in contents:
         assert attr in contents, f'Missing attribute in manifest: "{attr}"'
@@ -49,6 +50,8 @@ def new_pack_extract(pack_name: str):
     for name, val in zip(attributes, data):
         print(name, '-', val)
     pack_data = ExtractedPackData(*data)
+    if pack_data.development:
+        raise Exception('Tried to release a Pack marked with development flag!')
 
     print()
     print('Input Changelog / Release Notes (leave empty to continue)')
